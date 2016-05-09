@@ -1,0 +1,48 @@
+import numpy as np
+from PCA import mnist
+
+def zernikeMoment(image,n,m):
+    #NxN image where N is even
+    N = image.shape[0]
+    x = np.arange(N)
+    y = x
+    X,Y = np.meshgrid(x+1,y+1)
+    R = np.divide(np.sqrt(np.power(np.multiply(2,X)-N-1,2)+np.power(np.multiply(2,Y)-N-1,2)),N)
+    theta = np.arctan2((N-1-np.multiply(Y,2)+2),(np.multiply(X,2)-N+1-2))
+    R = np.multiply((R<=1),R)
+    Rad = radialpoly(R,n,m)
+    Product = np.multiply(np.multiply(image,Rad),np.exp(np.multiply(-1j*m,theta)))
+    Z = np.sum(np.ravel(Product))
+    #Product = p(x,y).*Rad.*exp(-1i*m*Theta);
+    cnt = np.count_nonzero(R)+1
+    Z = (n+1)*Z/cnt
+    A = abs(Z)
+    Phi = np.angle(Z)*180/np.math.pi
+    return A
+
+
+def radialpoly(r,n,m):
+    rad = np.zeros((r.shape))
+    what = (n-abs(m))/2+1
+    for s in range(0,int(what)):
+        c = (-1)**(s)*np.math.factorial(n-s)/(np.math.factorial(s)*np.math.factorial((n+abs(m))/2-s)*np.math.factorial((n-abs(m))/2-s))
+        rad = rad + c*np.power(r,(n-2*s))
+    return rad
+"""
+import pylab as plt
+digits = mnist()
+from scipy import misc
+x = misc.imread('test.png')
+def rgb2gray(rgb):
+    return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
+
+x = rgb2gray(x)
+x = np.double(x==0)
+#x = np.double(np.logical_not(x))
+print(zernikeMoment(x,8,2))
+plt.imshow(digits.train_Images[1,:].reshape(28,28)> 0.1)
+plt.show()
+print(digits.train_Images[1,:].reshape(28,28)> 0.1)
+zernikeMoment(digits.train_Images[1,:].reshape(28,28)> 0.1,8,2)
+
+"""
