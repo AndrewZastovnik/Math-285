@@ -1,0 +1,122 @@
+import sklearn.cluster as sk
+from PCA import mnist, class_error_rate
+import numpy as np
+import pylab as plt
+from Classifiers import KNN
+from sklearn.svm import SVC
+import pylab as plt
+import pickle
+
+def main():
+    digits = mnist()
+    new_train = zernike_moments(digits.train_Images)
+    new_test = zernike_moments(digits.test_Images)
+    mysvm = SVC()
+    mysvm.fit(new_train,digits.train_Labels)
+    labels = mysvm.predict(new_test)
+    pickle.dump(labels,open('svmzerniksvm.p','wb'))
+    errors,index = class_error_rate(labels,digits.test_Labels)
+    print(errors)
+    labels,near = KNN(new_train,digits.train_Labels,new_test,10)
+    pickle.dump(labels,open('svmzernikeknn.p','wb'))
+    errors,index = class_error_rate(labels,digits.test_Labels)
+    print(errors)
+    """
+    index = np.arange(digits.test_Labels.size)[digits.test_Labels == 9]
+    for i in range(10):
+        myKMeans = sk.KMeans(n_clusters=2)
+        myKMeans.fit(np.transpose(digits.test_Images[index[i]].reshape(1,784)))
+        background = myKMeans.labels_[0]
+        mydigit = np.where(myKMeans.labels_.reshape(28,28)!=background)
+        mu00 = np.sum(myKMeans.labels_ != background)
+        x_bar = np.sum(mydigit[0])/mu00
+        y_bar = np.sum(mydigit[1])/mu00 # the x and y might be switched
+        times = np.power((mydigit[0]-x_bar),1).reshape(mydigit[0].size,1)@np.power((mydigit[1]-y_bar),1).reshape(1,mydigit[1].size)
+        mu11 = np.sum(times)
+        times = np.power((mydigit[0]-x_bar),2).reshape(mydigit[0].size,1)@np.power((mydigit[1]-y_bar),0).reshape(1,mydigit[1].size)
+        mu20 = np.sum(times)
+        times = np.power((mydigit[0]-x_bar),0).reshape(mydigit[0].size,1)@np.power((mydigit[1]-y_bar),2).reshape(1,mydigit[1].size)
+        mu02 = np.sum(times)
+        oriantation = .5*np.arctan(2*(mu11/mu00)/(mu20/mu00-mu02/mu00))
+        print(oriantation)
+        plt.scatter(mydigit[1],28-mydigit[0])
+        plt.scatter(y_bar,x_bar,s=100)
+        plt.xlim(0,28)
+        plt.ylim(0,28)
+        plt.show()
+    #plt.imshow(myKMeans.labels_.reshape(28,28))
+    #plt.show()
+"""
+
+def image_moments(Images):
+    new_Images = np.zeros((Images.shape[0],24))
+    for image in range(Images.shape[0]):
+        #myKMea
+        # ns = sk.KMeans(n_clusters=2)
+        #myKMeans.fit(np.transpose(Images[image,:].reshape(1,Images[image,:].size)))
+        divid = Images[image,:].reshape(1,Images[image,:].size) > 0.1
+        mydigit1 = np.where(divid.reshape(28,28))
+        count = 0
+        for k in range(3):
+            mu00 = np.sum(divid)
+            x_bar = np.sum(mydigit1[0])/mu00
+            y_bar = np.sum(mydigit1[1])/mu00
+            mu = np.zeros(3*(5*5-1))
+            for i in range(0,5):
+                for j in range(0,5):
+                    if i + j >1:
+                        times = np.power((mydigit1[0]-x_bar),i).reshape(mydigit1[0].size,1)@np.power((mydigit1[1]-y_bar),j).reshape(1,mydigit1[1].size)
+                        mu[count] = np.divide(np.sum(times),(np.power(mu00,(1+(i+j)/2))))
+                        count += 1
+        new_Images[image,:] = mu
+        if image % 1000 == 1:
+            print(image)
+    return new_Images
+
+from ZernikeMoments import zernikeMoment
+def zernike_moments(Images):
+    new_Images = np.zeros((Images.shape[0],27))
+    for image in range(Images.shape[0]):
+        divid = np.double(Images[image,:].reshape(28,28) > 0.1)
+        divid = divid.reshape(28,28)
+        mu00 = np.sum(divid)
+        mydigit1 = np.where(divid.reshape(28,28))
+        x_bar = np.sum(mydigit1[0])/mu00
+        y_bar = np.sum(mydigit1[1])/mu00
+        centerx = mydigit1[0]-x_bar
+        centery = mydigit1[1]-y_bar
+        divid = np.zeros((28,28))
+        divid[centery.astype(int)+14,centerx.astype(int)+14] = 1
+        count = 0
+        new_Images[image,0] = zernikeMoment(divid,1,-1)
+        new_Images[image,1] = zernikeMoment(divid,1,1)
+        new_Images[image,2] = zernikeMoment(divid,2,-2)
+        new_Images[image,3] = zernikeMoment(divid,2,0)
+        new_Images[image,4] = zernikeMoment(divid,2,2)
+        new_Images[image,5] = zernikeMoment(divid,3,-3)
+        new_Images[image,6] = zernikeMoment(divid,3,-1)
+        new_Images[image,7] = zernikeMoment(divid,3,1)
+        new_Images[image,8] = zernikeMoment(divid,3,3)
+        new_Images[image,9] = zernikeMoment(divid,4,-4)
+        new_Images[image,10] = zernikeMoment(divid,4,-2)
+        new_Images[image,11] = zernikeMoment(divid,4,0)
+        new_Images[image,12] = zernikeMoment(divid,4,2)
+        new_Images[image,13] = zernikeMoment(divid,4,4)
+        new_Images[image,14] = zernikeMoment(divid,5,-5)
+        new_Images[image,15] = zernikeMoment(divid,5,-3)
+        new_Images[image,16] = zernikeMoment(divid,5,-1)
+        new_Images[image,17] = zernikeMoment(divid,5,1)
+        new_Images[image,18] = zernikeMoment(divid,5,3)
+        new_Images[image,19] = zernikeMoment(divid,5,5)
+        new_Images[image,20] = zernikeMoment(divid,6,-6)
+        new_Images[image,21] = zernikeMoment(divid,6,-4)
+        new_Images[image,22] = zernikeMoment(divid,6,-2)
+        new_Images[image,23] = zernikeMoment(divid,6,0)
+        new_Images[image,24] = zernikeMoment(divid,6,2)
+        new_Images[image,25] = zernikeMoment(divid,6,4)
+        new_Images[image,26] = zernikeMoment(divid,6,6)
+        if image % 1000 == 1:
+            print(image)
+    return new_Images
+
+main()
