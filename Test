@@ -1,24 +1,68 @@
 import sklearn.cluster as sk
-from PCA import mnist, class_error_rate
+from PCA import mnist, class_error_rate,center_matrix_SVD
 import numpy as np
 import pylab as plt
-from Classifiers import KNN
+from Classifiers import KNN,nvb,local_kmeans_class
 from sklearn.svm import SVC
-import pylab as plt
+from scipy.spatial.distance import cdist
 import pickle
+from  ZernikeMoments import image_reconstruct
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis as QDA
 
 def main():
     digits = mnist()
-    new_train = zernike_moments(digits.train_Images)
-    new_test = zernike_moments(digits.test_Images)
-    mysvm = SVC()
-    mysvm.fit(new_train,digits.train_Labels)
-    labels = mysvm.predict(new_test)
+    #x = center_matrix_SVD(digits.train_Images)
+    #new_test_PCA = (digits.test_Images - x.centers)@np.transpose(x.V[:50,:])
+    #new_train = zernike_moments(digits.train_Images,10)
+    #new_test = zernike_moments(digits.test_Images,10)
+    #pickle.dump(new_train,open('new_train_50.p','wb'))
+    #pickle.dump(new_test,open('new_test_50.p','wb'))
+    new_train = pickle.load(open('new_train_50.p','rb'))
+    new_test = pickle.load(open('new_test_50.p','rb'))
+    #plt.imshow(digits.train_Images[0].reshape(28,28))
+    #plt.show()
+    #myimage = image_reconstruct(new_train[0,:],28,50)
+    #mynvb = nvb()
+    #mynvb.fit(new_train,digits.train_Labels)
+    #labels = mynvb.predict(new_test)
+    #errors,index = class_error_rate(np.transpose(labels),digits.test_Labels)
+    #print(errors)
+    #for i in range(new_test.shape[1]):
+        #prob3_plots(mynvb,digits,new_test,pc=i)
+    """
+    sigma = find_sigma(digits,600,8)
+    myonevsall = onevsall()
+    myonevsall.fit(digits,new_train,100,sigma)
+    labels = myonevsall.predict(digits,new_test,new_train)
+    print(labels)
     pickle.dump(labels,open('svmzerniksvm.p','wb'))
     errors,index = class_error_rate(labels,digits.test_Labels)
     print(errors)
-    labels,near = KNN(new_train,digits.train_Labels,new_test,10)
-    pickle.dump(labels,open('svmzernikeknn.p','wb'))
+    """
+    mynvb = nvb()
+    mynvb.fit(new_train,digits.train_Labels)
+    for i in range(new_train.shape[1]):
+        prob3_plots(mynvb,digits,new_test,pc=i)
+    labels = mynvb.predict(new_test)
+    errors,index = class_error_rate(labels,digits.test_Labels)
+    print(errors)
+    mysvm = SVC()
+    mysvm.fit(new_train,digits.train_Labels)
+    labels = mysvm.predict(new_test)
+    #pickle.dump(labels,open('svmzerniksvm.p','wb'))
+    errors,index = class_error_rate(labels,digits.test_Labels)
+    print(errors)
+    labels = KNN(new_train,digits.train_Labels,new_test,10)
+    #pickle.dump(labels,open('svmzernikeknn.p','wb'))
+    errors,index = class_error_rate(np.transpose(labels),digits.test_Labels)
+    print(errors)
+    labels = local_kmeans_class(new_train,digits.train_Labels,new_test,10)
+    #pickle.dump(labels,open('svmzernikeknn.p','wb'))
+    errors,index = class_error_rate(np.transpose(labels),digits.test_Labels)
+    print(errors)
+    myQDA = QDA()
+    myQDA.fit(new_train,digits.train_Labels)
+    labels = myQDA.predict(new_test)
     errors,index = class_error_rate(labels,digits.test_Labels)
     print(errors)
     """
@@ -74,8 +118,8 @@ def image_moments(Images):
     return new_Images
 
 from ZernikeMoments import zernikeMoment
-def zernike_moments(Images):
-    new_Images = np.zeros((Images.shape[0],27))
+def zernike_moments(Images, n):
+    new_Images = np.zeros((Images.shape[0],np.sum(np.arange(1,n))))
     for image in range(Images.shape[0]):
         divid = np.double(Images[image,:].reshape(28,28) > 0.1)
         divid = divid.reshape(28,28)
@@ -88,35 +132,96 @@ def zernike_moments(Images):
         divid = np.zeros((28,28))
         divid[centery.astype(int)+14,centerx.astype(int)+14] = 1
         count = 0
-        new_Images[image,0] = zernikeMoment(divid,1,-1)
-        new_Images[image,1] = zernikeMoment(divid,1,1)
-        new_Images[image,2] = zernikeMoment(divid,2,-2)
-        new_Images[image,3] = zernikeMoment(divid,2,0)
-        new_Images[image,4] = zernikeMoment(divid,2,2)
-        new_Images[image,5] = zernikeMoment(divid,3,-3)
-        new_Images[image,6] = zernikeMoment(divid,3,-1)
-        new_Images[image,7] = zernikeMoment(divid,3,1)
-        new_Images[image,8] = zernikeMoment(divid,3,3)
-        new_Images[image,9] = zernikeMoment(divid,4,-4)
-        new_Images[image,10] = zernikeMoment(divid,4,-2)
-        new_Images[image,11] = zernikeMoment(divid,4,0)
-        new_Images[image,12] = zernikeMoment(divid,4,2)
-        new_Images[image,13] = zernikeMoment(divid,4,4)
-        new_Images[image,14] = zernikeMoment(divid,5,-5)
-        new_Images[image,15] = zernikeMoment(divid,5,-3)
-        new_Images[image,16] = zernikeMoment(divid,5,-1)
-        new_Images[image,17] = zernikeMoment(divid,5,1)
-        new_Images[image,18] = zernikeMoment(divid,5,3)
-        new_Images[image,19] = zernikeMoment(divid,5,5)
-        new_Images[image,20] = zernikeMoment(divid,6,-6)
-        new_Images[image,21] = zernikeMoment(divid,6,-4)
-        new_Images[image,22] = zernikeMoment(divid,6,-2)
-        new_Images[image,23] = zernikeMoment(divid,6,0)
-        new_Images[image,24] = zernikeMoment(divid,6,2)
-        new_Images[image,25] = zernikeMoment(divid,6,4)
-        new_Images[image,26] = zernikeMoment(divid,6,6)
+        for i in range(1,n):
+            for j in range(-i,i,2):
+                #plt.subplot(3,9,count+1)
+                new_Images[image,count] = zernikeMoment(divid,i,j)
+                count += 1
+        #plt.tight_layout(pad=-0.7, w_pad=-0.5, h_pad=-1.5)
+        #plt.show()
         if image % 1000 == 1:
             print(image)
     return new_Images
+
+
+class onevsall:
+    def fit(self,digits,x,C,sigma):
+        self.mysvms = {}
+        labsuniq = np.unique(digits.train_Labels)
+        for i in range(labsuniq.size):
+            # Returns labels of 0 for i and 1 for the rest
+            labels = digits.train_Labels != labsuniq[i]
+            self.mysvms[str(labsuniq[i]) + "vs Rest"] = self.twoatatime(labels,x,C,sigma)
+            print("Just finished " + str(i) + " Vs some stuff")
+
+    def twoatatime(self,labels,x,C,sigma):
+        # Create a mask for our index variable
+        # Get the index number for digits
+        mysvm = svm.SVC(C=C,kernel='rbf',gamma=0.5*sigma**-2)
+        mysvm.fit(x,labels)
+        return mysvm
+
+    def predict(self,digits,test,train):
+        labsuniq = np.unique(digits.train_Labels)
+        count = 0
+        labels = np.zeros((test.shape[0],10))
+        for i in range(labsuniq.size):
+            # Is it in this group or not
+            labels[:,count] = self.mysvms[str(labsuniq[i]) + "vs Rest"].decision_function(test)
+            count += 1
+        label = np.argmin(labels,axis=1)
+        return label
+
+def find_sigma(digits,size,k):
+    index = np.random.permutation(digits.train_Labels.size)[:size]
+    dists = cdist(digits.train_Images[index], digits.train_Images[index], metric='euclidean')
+    sigma = 0
+    for i in range(size):
+        # This should return the kth closest neighbor since it includes itself
+        sigma += dists[i,np.argpartition(dists[i, :], tuple(range(1, k)), axis=None)[k]]
+    return sigma/size
+
+def prob3_plots(mynvb,digits,newtest,pc):
+    z= (np.arange(1000)/1000)*2 - 1 #
+    y0 = mynvb.likelihood[str(pc)+'l'+str(0)](z)
+    y1 = mynvb.likelihood[str(pc)+'l'+str(1)](z)
+    y2= mynvb.likelihood[str(pc)+'l'+str(2)](z)
+    y3 = mynvb.likelihood[str(pc)+'l'+str(3)](z)
+    y4 = mynvb.likelihood[str(pc)+'l'+str(4)](z)
+    y5 = mynvb.likelihood[str(pc)+'l'+str(5)](z)
+    y6 = mynvb.likelihood[str(pc)+'l'+str(6)](z)
+    y7 = mynvb.likelihood[str(pc)+'l'+str(7)](z)
+    y8 = mynvb.likelihood[str(pc)+'l'+str(8)](z)
+    y9 = mynvb.likelihood[str(pc)+'l'+str(9)](z)
+    plt.plot(z,y0, label='0')
+    indices = np.nonzero(np.array(digits.test_Labels == 1))
+    #plt.plot(newtest[indices,0],np.zeros(len(indices)),marker='o')
+    weights = np.ones_like(np.transpose(newtest[indices,pc]))/len(np.transpose(newtest[indices,pc]))
+    plt.hist(np.transpose(newtest[indices,pc]),weights=weights)
+    plt.plot(z,y1, label='1')
+    plt.plot(z,y2, label='2')
+    plt.plot(z,y3, label='3')
+    plt.plot(z,y4, label='4')
+    plt.plot(z,y5, label='5')
+    plt.plot(z,y6, label='6',ls='--')
+    plt.plot(z,y7, label='7',ls='--')
+    plt.plot(z,y8, label='8',ls='--')
+    plt.plot(z,y9, label='9',ls='--')
+    plt.legend(loc='upper right')
+    plt.show()
+
+
+def do_ran():
+    myperm = np.random.permutation(60000)
+    sizes = [1000,2000,3000,4000,5000,8000,10000,20000,40000,60000]
+    for i in range(10):
+        labels = KNN(new_train[myperm[:sizes[i]]],digits.train_Labels[myperm[:sizes[i]]],new_test,10)
+        #pickle.dump(labels,open('svmzernikeknn.p','wb'))
+        errors,index = class_error_rate(np.transpose(labels),digits.test_Labels)
+        print(str(min(errors))+ " for IM")
+        labels = KNN(x.PCA[myperm[:sizes[i]],:50],digits.train_Labels[myperm[:sizes[i]]],new_test_PCA,10)
+        #pickle.dump(labels,open('svmzernikeknn.p','wb'))
+        errors,index = class_error_rate(np.transpose(labels),digits.test_Labels)
+        print(str(min(errors))+ " for PCA")
 
 main()
