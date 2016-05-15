@@ -1,0 +1,16 @@
+import pickle
+import numpy as np
+from sklearn.metrics import confusion_matrix
+from PCA import mnist
+import pylab
+digits = mnist()
+labels = pickle.load(open('svmzernikeknn.p','rb'))
+x = confusion_matrix(digits.test_Labels,labels[:,3])
+x = x - np.diag(np.diag(x))
+pylab.imshow(x,interpolation='none')
+pylab.xticks(np.arange(10))
+pylab.yticks(np.arange(10))
+pylab.xlabel("Predicted value")
+pylab.ylabel("True Value")
+pylab.colorbar()
+pylab.show()
